@@ -1,33 +1,38 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Configuration
 canvas.width = 800;
 canvas.height = 500;
 
-const spritesPath = 'sprites/'; // Folder where images are kept
+const spritesPath = 'sprites/'; 
+// --- ALTERAÇÃO AQUI: Extensões mudadas para .png ---
 const spriteFiles = {
-    idle: 'idle.jpg',
-    stance: 'stance.jpg',
-    punch: 'punch.jpg',
-    kick: 'kick.jpg',
-    jump: 'jump.jpg'
+    idle: 'idle.png',
+    stance: 'stance.png',
+    punch: 'punch.png',
+    kick: 'kick.png',
+    jump: 'jump.png'
 };
+// ----------------------------------------------------
 
-// State handling
 const images = {};
 let imagesLoaded = 0;
 const totalImages = Object.keys(spriteFiles).length;
 
-// Load images
 for (let key in spriteFiles) {
     images[key] = new Image();
     images[key].src = spritesPath + spriteFiles[key];
+    
     images[key].onload = () => {
         imagesLoaded++;
         if (imagesLoaded === totalImages) {
             requestAnimationFrame(gameLoop);
         }
+    };
+
+    // Adicionei um log de erro para ajudar a diagnosticar se algo ainda estiver errado
+    images[key].onerror = () => {
+        console.error(`Erro ao carregar imagem: ${spritesPath}${spriteFiles[key]}. Verifique se o arquivo existe e o nome está correto.`);
     };
 }
 
@@ -41,27 +46,17 @@ const player = {
     isGrounded: true,
     gravity: 0.8,
     jumpForce: -15,
-    actionTimer: 0 // Duration for punch/kick/stance
+    actionTimer: 0
 };
 
 const keys = {};
 
-// Input Listeners
-window.addEventListener('keydown', (e) => {
-    keys[e.code] = true;
-});
-
-window.addEventListener('keyup', (e) => {
-    keys[e.code] = false;
-});
+window.addEventListener('keydown', (e) => keys[e.code] = true);
+window.addEventListener('keyup', (e) => keys[e.code] = false);
 
 function update() {
-    // Reset state to idle by default if no action is happening
-    if (player.isGrounded && player.actionTimer <= 0) {
-        player.state = 'idle';
-    }
+    if (player.isGrounded && player.actionTimer <= 0) player.state = 'idle';
 
-    // Prioritize Actions
     if (player.actionTimer > 0) {
         player.actionTimer--;
     } else {
@@ -71,61 +66,34 @@ function update() {
             player.isGrounded = false;
         } else if (keys['KeyJ']) {
             player.state = 'punch';
-            player.actionTimer = 15; // frames
+            player.actionTimer = 15;
         } else if (keys['KeyK']) {
             player.state = 'kick';
-            player.actionTimer = 20; // frames
+            player.actionTimer = 20;
         } else if (keys['KeyS']) {
             player.state = 'stance';
         }
     }
 
-    // Apply Physics for Jumping
     if (!player.isGrounded) {
         player.y += player.velocityY;
         player.velocityY += player.gravity;
-        player.state = 'jump';
-
-        // Check floor collision
         if (player.y >= canvas.height - 350) {
             player.y = canvas.height - 350;
             player.isGrounded = true;
             player.velocityY = 0;
-            player.state = 'idle';
         }
     }
 }
 
-function drawBackground() {
-    // Simple Rooftop/Arena background
+function draw() {
     ctx.fillStyle = '#2c3e50';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Floor
     ctx.fillStyle = '#1a252f';
     ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
-    
-    // Distant "City" lights
-    ctx.fillStyle = '#f1c40f';
-    for(let i=0; i < 5; i++) {
-        ctx.fillRect(100 + (i*150), 300, 30, 100);
-    }
-}
 
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    drawBackground();
-
-    // Draw Character Sprite
     const currentImg = images[player.state];
-    if (currentImg) {
-        // Shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath();
-        ctx.ellipse(player.x + 100, canvas.height - 100, 60, 20, 0, 0, Math.PI * 2);
-        ctx.fill();
-
+    if (currentImg && currentImg.complete) {
         ctx.drawImage(currentImg, player.x, player.y, player.width, player.height);
     }
 }
